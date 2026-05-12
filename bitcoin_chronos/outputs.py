@@ -60,6 +60,12 @@ def write_report(summary: dict[str, Any], path: Path) -> None:
     low_high = ""
     if summary.get("last_low") is not None and summary.get("last_high") is not None:
         low_high = f"\n- Last 10-90% range: {summary['last_low']:,.2f} - {summary['last_high']:,.2f}"
+    covariates = ""
+    if summary.get("covariates"):
+        covariates = "\n\n## Macro covariates\n\n"
+        covariates += f"- Columns: {', '.join(summary['covariates'])}\n"
+        if summary.get("macro_source"):
+            covariates += f"- Source: {summary['macro_source']}\n"
 
     report = f"""# Bitcoin Chronos-2 Forecast
 
@@ -68,6 +74,7 @@ def write_report(summary: dict[str, Any], path: Path) -> None:
 - Last forecast timestamp: {summary['last_timestamp']}
 - First point forecast: {summary['first_point']:,.2f}
 - Last point forecast: {summary['last_point']:,.2f}{low_high}
+{covariates}
 
 This is a model forecast, not financial advice. Bitcoin can move sharply for reasons that are not visible in the historical price curve.
 """

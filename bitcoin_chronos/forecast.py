@@ -11,7 +11,13 @@ from typing import Any
 import pandas as pd
 import requests
 
-from bitcoin_chronos.data import build_context_frame, parse_binance_klines
+from bitcoin_chronos.data import build_context_frame, merge_macro_covariates, parse_binance_klines
+from bitcoin_chronos.macro import (
+    BGEOMETRICS_M2_URL,
+    BGEOMETRICS_SOURCE,
+    MACRO_COVARIATE_COLUMNS,
+    fetch_bgeometrics_macro,
+)
 from bitcoin_chronos.outputs import (
     forecast_summary,
     write_forecast_svg,
@@ -100,11 +106,24 @@ def run_forecast(args: argparse.Namespace) -> Path:
     if len(history) < args.min_history:
         raise ValueError(f"Only {len(history)} completed candles found; need at least {args.min_history}.")
 
-    context = build_context_frame(history, item_id=args.symbol.upper())
     output_dir = args.output_dir or Path("outputs") / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    covariate_columns: list[str] = []
+    macro = pd.DataFrame()
+    if args.m2_covariates:
+        macro = fetch_bgeometrics_macro()
+        macro.to_csv(output_dir / "macro_covariates_raw.csv", index=False)
+        history = merge_macro_covariates(history, macro)
+        covariate_columns = MACRO_COVARIATE_COLUMNS.copy()
+        history[["timestamp", *covariate_columns]].to_csv(output_dir / "macro_covariates_aligned.csv", index=False)
+
+    context = build_context_frame(
+        history,
+        item_id=args.symbol.upper(),
+        covariate_columns=covariate_columns,
+    )
     history.to_csv(output_dir / "history.csv", index=False)
     context.to_csv(output_dir / "chronos_context.csv", index=False)
 
@@ -133,8 +152,20 @@ def run_forecast(args: argparse.Namespace) -> Path:
             "history_end": pd.Timestamp(history.iloc[-1]["timestamp"]).isoformat(),
             "last_observed_close": float(history.iloc[-1]["close"]),
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "covariates": covariate_columns,
         }
     )
+    if covariate_columns:
+        summary.update(
+            {
+                "macro_source": BGEOMETRICS_SOURCE,
+                "macro_source_url": BGEOMETRICS_M2_URL,
+                "macro_rows": int(len(macro)),
+                "macro_last_timestamp": pd.Timestamp(macro.iloc[-1]["timestamp"]).isoformat(),
+                "m2_global_supply_usd_last": float(history.iloc[-1]["m2_global_supply_usd"]),
+                "m2_growth_yoy_pct_last": float(history.iloc[-1]["m2_growth_yoy_pct"]),
+            }
+        )
     write_summary_json(summary, output_dir / "summary.json")
     write_report(summary, output_dir / "report.md")
     write_forecast_svg(history, forecast, output_dir / "forecast.svg")
@@ -154,6 +185,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default="cpu", help="Use cpu by default; use cuda only when GPU is free.")
     parser.add_argument("--min-history", type=int, default=128, help="Minimum completed candles required.")
     parser.add_argument("--output-dir", type=Path, default=None, help="Directory for CSV, JSON, report, and SVG.")
+    parser.add_argument(
+        "--no-m2-covariates",
+        action="store_false",
+        dest="m2_covariates",
+        help="Disable BGeometrics M2 Global Supply and M2 Growth YoY past covariates.",
+    )
+    parser.set_defaults(m2_covariates=True)
     return parser
 
 

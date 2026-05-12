@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Zero-shot Bitcoin price forecast generated with Amazon Chronos-2 from BTCUSDT daily candles."
+      content="Multivariate zero-shot Bitcoin price forecast generated with Amazon Chronos-2 from BTCUSDT daily candles and Global M2 covariates."
     />
     <title>Bitcoin Chronos-2 Forecast</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -16,8 +16,8 @@
         <div>
           <h1>Bitcoin Chronos-2 Forecast</h1>
           <p>
-            Zero-shot BTCUSDT daily forecast from historical Binance close prices.
-            This is a model experiment, not financial advice.
+            Multivariate zero-shot BTCUSDT daily forecast from historical Binance close prices,
+            Global M2 Supply, and M2 Growth YoY. This is a model experiment, not financial advice.
           </p>
         </div>
         <div class="run-meta" aria-live="polite">
@@ -43,6 +43,24 @@
           <span>Forecast window</span>
           <strong id="window">-</strong>
         </article>
+        <article>
+          <span>Global M2 Supply</span>
+          <strong id="m2Supply">-</strong>
+        </article>
+        <article>
+          <span>M2 Growth YoY</span>
+          <strong id="m2Growth">-</strong>
+        </article>
+      </section>
+
+      <section class="macro-panel" aria-label="Macro covariates">
+        <div class="section-title">
+          <h2>Multivariate macro inputs</h2>
+          <a href="/data/latest/macro_covariates.csv">Download M2 CSV</a>
+        </div>
+        <p id="macroSource">
+          Loading M2 source...
+        </p>
       </section>
 
       <section class="chart-panel" aria-label="Forecast chart">

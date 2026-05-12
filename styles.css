@@ -84,13 +84,14 @@ h1 {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
 
 .metrics article,
 .chart-panel,
+.macro-panel,
 .table-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -121,9 +122,17 @@ h1 {
 }
 
 .chart-panel,
+.macro-panel,
 .table-panel {
   margin-top: 18px;
   padding: 22px;
+}
+
+.macro-panel p {
+  max-width: 900px;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
 }
 
 .section-title {
@@ -241,6 +250,7 @@ tbody tr:last-child td {
   }
 
   .chart-panel,
+  .macro-panel,
   .table-panel {
     padding: 14px;
   }

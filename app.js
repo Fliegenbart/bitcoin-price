@@ -2,6 +2,10 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });
+const percent = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
+});
 
 function byId(id) {
   return document.getElementById(id);
@@ -22,6 +26,11 @@ function formatDate(value) {
     year: "numeric",
     timeZone: "UTC",
   }).format(toUtcDate(value));
+}
+
+function formatUsdTrillions(value) {
+  if (!Number.isFinite(Number(value))) return "-";
+  return `$${money.format(Number(value) / 1_000_000_000_000)}T`;
 }
 
 function parseCsv(csv) {
@@ -56,6 +65,13 @@ function renderSummary(summary) {
   byId("lastPoint").textContent = `$${money.format(summary.last_point)}`;
   byId("range").textContent = `$${money.format(summary.last_low)} - $${money.format(summary.last_high)}`;
   byId("window").textContent = `${formatDate(summary.first_timestamp)} - ${formatDate(summary.last_timestamp)}`;
+  byId("m2Supply").textContent = formatUsdTrillions(summary.m2_global_supply_usd_last);
+  byId("m2Growth").textContent = Number.isFinite(Number(summary.m2_growth_yoy_pct_last))
+    ? `${percent.format(summary.m2_growth_yoy_pct_last)}%`
+    : "-";
+  byId("macroSource").innerHTML = summary.covariates?.length
+    ? `Chronos input now includes <strong>${summary.covariates.join("</strong> and <strong>")}</strong> as past covariates. Latest macro point: ${formatDate(summary.macro_last_timestamp)}. Source: <a href="${summary.macro_source_url}">${summary.macro_source}</a>.`
+    : "This run does not include macro covariates.";
 }
 
 function renderForecastRows(rows) {

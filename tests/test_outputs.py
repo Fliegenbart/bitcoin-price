@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from bitcoin_chronos.outputs import forecast_summary, point_forecast_column, write_forecast_svg
+from bitcoin_chronos.outputs import forecast_summary, point_forecast_column, write_forecast_svg, write_report
 
 
 class ForecastOutputTests(unittest.TestCase):
@@ -87,6 +87,28 @@ class ForecastOutputTests(unittest.TestCase):
 
         self.assertIn('id="probability-corridor"', svg)
         self.assertIn("10-90% probability corridor", svg)
+
+    def test_write_report_mentions_macro_covariates_when_present(self):
+        summary = {
+            "horizon_steps": 90,
+            "first_timestamp": "2026-05-12T00:00:00",
+            "last_timestamp": "2026-08-09T00:00:00",
+            "first_point": 82_000.0,
+            "last_point": 68_000.0,
+            "last_low": 46_000.0,
+            "last_high": 106_000.0,
+            "covariates": ["m2_global_supply_usd", "m2_growth_yoy_pct"],
+            "macro_source": "BGeometrics M2 Growth Global YoY chart",
+        }
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.md"
+            write_report(summary, path)
+            report = path.read_text(encoding="utf-8")
+
+        self.assertIn("Macro covariates", report)
+        self.assertIn("m2_global_supply_usd", report)
+        self.assertIn("BGeometrics M2 Growth Global YoY chart", report)
 
 
 if __name__ == "__main__":
