@@ -64,6 +64,30 @@ class ForecastOutputTests(unittest.TestCase):
 
             self.assertIn("BTCUSDT Chronos-2 Forecast", path.read_text(encoding="utf-8"))
 
+    def test_write_forecast_svg_draws_probability_corridor_when_quantiles_exist(self):
+        history = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
+                "close": [100.0, 101.0],
+            }
+        )
+        forecast = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-03", "2026-01-04"]),
+                "predictions": [102.0, 103.0],
+                "0.1": [95.0, 96.0],
+                "0.9": [110.0, 112.0],
+            }
+        )
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "forecast.svg"
+            write_forecast_svg(history, forecast, path)
+            svg = path.read_text(encoding="utf-8")
+
+        self.assertIn('id="probability-corridor"', svg)
+        self.assertIn("10-90% probability corridor", svg)
+
 
 if __name__ == "__main__":
     unittest.main()

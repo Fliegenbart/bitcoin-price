@@ -24,6 +24,13 @@ def _optional_float(row: pd.Series, column: str) -> float | None:
     return float(value)
 
 
+def _optional_column(frame: pd.DataFrame, *candidates: object) -> object | None:
+    for column in candidates:
+        if column in frame.columns:
+            return column
+    return None
+
+
 def forecast_summary(forecast: pd.DataFrame) -> dict[str, Any]:
     if forecast.empty:
         raise ValueError("Forecast is empty")
@@ -69,6 +76,8 @@ This is a model forecast, not financial advice. Bitcoin can move sharply for rea
 
 def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path) -> None:
     point_column = point_forecast_column(forecast)
+    low_column = _optional_column(forecast, "0.1", 0.1)
+    high_column = _optional_column(forecast, "0.9", 0.9)
     history_tail = history.tail(365).copy()
     history_tail["timestamp"] = pd.to_datetime(history_tail["timestamp"], utc=True).dt.tz_localize(None)
     history_tail["kind"] = "history"
@@ -79,13 +88,25 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     forecast_points["kind"] = "forecast"
     forecast_points["value"] = forecast_points[point_column].astype(float)
 
-    combined = pd.concat(
-        [
-            history_tail[["timestamp", "kind", "value"]],
-            forecast_points[["timestamp", "kind", "value"]],
-        ],
-        ignore_index=True,
-    ).sort_values("timestamp")
+    corridor_points = pd.DataFrame()
+    if low_column is not None and high_column is not None:
+        corridor_points = forecast[["timestamp", low_column, high_column]].copy()
+        corridor_points["timestamp"] = pd.to_datetime(corridor_points["timestamp"], utc=True).dt.tz_localize(None)
+        corridor_points["low"] = corridor_points[low_column].astype(float)
+        corridor_points["high"] = corridor_points[high_column].astype(float)
+
+    value_frames = [
+        history_tail[["timestamp", "kind", "value"]],
+        forecast_points[["timestamp", "kind", "value"]],
+    ]
+    if not corridor_points.empty:
+        value_frames.extend(
+            [
+                corridor_points[["timestamp", "low"]].rename(columns={"low": "value"}).assign(kind="corridor"),
+                corridor_points[["timestamp", "high"]].rename(columns={"high": "value"}).assign(kind="corridor"),
+            ]
+        )
+    combined = pd.concat(value_frames, ignore_index=True).sort_values("timestamp")
 
     min_value = float(combined["value"].min())
     max_value = float(combined["value"].max())
@@ -120,6 +141,18 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
             commands.append(("M" if idx == 0 else "L") + f" {x:.1f} {y:.1f}")
         return " ".join(commands)
 
+    def corridor_path() -> str:
+        if corridor_points.empty:
+            return ""
+        ordered = corridor_points.sort_values("timestamp")
+        upper = [xy(row.timestamp, row.high) for row in ordered.itertuples(index=False)]
+        lower = [xy(row.timestamp, row.low) for row in reversed(list(ordered.itertuples(index=False)))]
+        points = upper + lower
+        commands = []
+        for idx, (x, y) in enumerate(points):
+            commands.append(("M" if idx == 0 else "L") + f" {x:.1f} {y:.1f}")
+        return " ".join(commands) + " Z"
+
     y_ticks = []
     for i in range(5):
         value = min_value + (max_value - min_value) * i / 4
@@ -143,10 +176,16 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
         [
             f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height - bottom}" stroke="#9ca3af" stroke-width="1"/>',
             f'<line x1="{left}" y1="{height - bottom}" x2="{width - right}" y2="{height - bottom}" stroke="#9ca3af" stroke-width="1"/>',
+            f'<path id="probability-corridor" d="{corridor_path()}" fill="#dc2626" fill-opacity="0.13" stroke="none"/>'
+            if not corridor_points.empty
+            else "",
             f'<path d="{path_for("history")}" fill="none" stroke="#2563eb" stroke-width="2.2"/>',
             f'<path d="{path_for("forecast")}" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="8 5"/>',
             f'<circle cx="{left + 8}" cy="{height - 34}" r="5" fill="#2563eb"/><text x="{left + 20}" y="{height - 30}" font-family="Arial, sans-serif" font-size="13" fill="#374151">history</text>',
             f'<circle cx="{left + 98}" cy="{height - 34}" r="5" fill="#dc2626"/><text x="{left + 110}" y="{height - 30}" font-family="Arial, sans-serif" font-size="13" fill="#374151">forecast</text>',
+            f'<rect x="{left + 185}" y="{height - 39}" width="22" height="10" rx="2" fill="#dc2626" fill-opacity="0.18"/><text x="{left + 216}" y="{height - 30}" font-family="Arial, sans-serif" font-size="13" fill="#374151">10-90% probability corridor</text>'
+            if not corridor_points.empty
+            else "",
             "</svg>",
         ]
     )
