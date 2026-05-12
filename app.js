@@ -6,6 +6,10 @@ const percent = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
 });
+const compactMoney = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  notation: "compact",
+});
 const chartViewBox = {
   width: 1100,
   height: 620,
@@ -17,11 +21,22 @@ const chartViewBox = {
 const state = {
   manifest: null,
   selectedScale: "linear",
-  selectedScenario: "m2_both",
+  selectedScenario: "macro_all",
   summaries: {},
   forecasts: {},
   historyRows: [],
   hoverPoints: [],
+};
+const covariateLabels = {
+  m2_global_supply_usd: "Global M2 Supply",
+  m2_growth_yoy_pct: "M2 Growth YoY",
+  g4_global_liquidity_usd: "G4 Global Liquidity",
+  fed_net_liquidity_usd: "Fed Net Liquidity",
+  dxy_inverse: "DXY inverse",
+  fear_greed_index: "Fear & Greed",
+  usdt_supply_net_change_usd: "USDT net supply change",
+  usdt_supply_mint_proxy_usd: "USDT mint proxy",
+  usdt_supply_burn_proxy_usd: "USDT burn proxy",
 };
 
 function byId(id) {
@@ -55,6 +70,17 @@ function formatUsd(value) {
   return `$${money.format(Number(value))}`;
 }
 
+function cleanSignedZero(value) {
+  const numericValue = Number(value);
+  return Object.is(numericValue, -0) ? 0 : numericValue;
+}
+
+function formatUsdCompact(value) {
+  const numericValue = cleanSignedZero(value);
+  if (!Number.isFinite(numericValue)) return "-";
+  return `$${compactMoney.format(numericValue)}`;
+}
+
 function formatUsdDelta(value) {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return "-";
@@ -62,10 +88,37 @@ function formatUsdDelta(value) {
   return `${sign}$${money.format(Math.abs(numericValue))}`;
 }
 
+function formatUsdCompactDelta(value) {
+  const numericValue = cleanSignedZero(value);
+  if (!Number.isFinite(numericValue)) return "-";
+  const sign = numericValue > 0 ? "+" : numericValue < 0 ? "-" : "";
+  return `${sign}$${compactMoney.format(Math.abs(numericValue))}`;
+}
+
 function setDeltaText(element, value) {
   element.textContent = formatUsdDelta(value);
   element.classList.toggle("delta-positive", Number(value) > 0);
   element.classList.toggle("delta-negative", Number(value) < 0);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function covariateLabel(column) {
+  return covariateLabels[column] || column;
+}
+
+function covariateList(columns) {
+  return columns.length ? columns.map(covariateLabel).join(", ") : "BTC close price only";
+}
+
+function latestMacroValue(summary, column) {
+  return summary?.macro_latest_values?.[column] ?? summary?.[`${column}_last`];
 }
 
 function parseCsv(csv) {
@@ -118,7 +171,7 @@ async function getScenarioForecast(key) {
 }
 
 function scenarioKeyFromControls() {
-  const covariates = [];
+  const covariates = [...(state.manifest.coreCovariates || [])];
   if (byId("toggleM2Supply").checked) covariates.push("m2_global_supply_usd");
   if (byId("toggleM2Growth").checked) covariates.push("m2_growth_yoy_pct");
   const wanted = covariates.join("|");
@@ -132,8 +185,8 @@ function syncCovariateControls(scenario) {
 
 function renderSummary(summary, scenario) {
   const baseline = state.summaries[state.manifest.baseline];
-  const both = state.summaries[state.manifest.default];
-  const macroSummary = both || summary;
+  const fullMacro = state.summaries[state.manifest.default];
+  const macroSummary = fullMacro || summary;
 
   byId("model").textContent = summary.model;
   byId("generated").textContent = `Generated ${formatDate(summary.generated_at)}`;
@@ -141,20 +194,36 @@ function renderSummary(summary, scenario) {
   byId("lastPoint").textContent = formatUsd(summary.last_point);
   byId("range").textContent = `${formatUsd(summary.last_low)} - ${formatUsd(summary.last_high)}`;
   byId("window").textContent = `${formatDate(summary.first_timestamp)} - ${formatDate(summary.last_timestamp)}`;
-  byId("m2Supply").textContent = formatUsdTrillions(macroSummary.m2_global_supply_usd_last);
-  byId("m2Growth").textContent = Number.isFinite(Number(macroSummary.m2_growth_yoy_pct_last))
-    ? `${percent.format(macroSummary.m2_growth_yoy_pct_last)}%`
+  byId("m2Supply").textContent = formatUsdTrillions(latestMacroValue(macroSummary, "m2_global_supply_usd"));
+  byId("m2Growth").textContent = Number.isFinite(Number(latestMacroValue(macroSummary, "m2_growth_yoy_pct")))
+    ? `${percent.format(latestMacroValue(macroSummary, "m2_growth_yoy_pct"))}%`
     : "-";
+  byId("g4Liquidity").textContent = formatUsdTrillions(latestMacroValue(macroSummary, "g4_global_liquidity_usd"));
+  byId("fedLiquidity").textContent = formatUsdTrillions(latestMacroValue(macroSummary, "fed_net_liquidity_usd"));
+  byId("dxyInverse").textContent = Number.isFinite(Number(latestMacroValue(macroSummary, "dxy_inverse")))
+    ? Number(latestMacroValue(macroSummary, "dxy_inverse")).toFixed(4)
+    : "-";
+  byId("fearGreed").textContent = Number.isFinite(Number(latestMacroValue(macroSummary, "fear_greed_index")))
+    ? Number(latestMacroValue(macroSummary, "fear_greed_index")).toFixed(0)
+    : "-";
+  byId("usdtNet").textContent = formatUsdCompactDelta(latestMacroValue(macroSummary, "usdt_supply_net_change_usd"));
+  byId("usdtMintBurn").textContent = `${formatUsdCompact(latestMacroValue(macroSummary, "usdt_supply_mint_proxy_usd"))} / ${formatUsdCompact(latestMacroValue(macroSummary, "usdt_supply_burn_proxy_usd"))}`;
+  byId("coreInputs").textContent = covariateList(state.manifest.coreCovariates || []);
   byId("scenarioName").textContent = scenario.label;
   setDeltaText(byId("deltaBaseline"), Number(summary.last_point) - Number(baseline.last_point));
-  setDeltaText(byId("deltaFull"), Number(summary.last_point) - Number(both.last_point));
+  setDeltaText(byId("deltaFull"), Number(summary.last_point) - Number(fullMacro.last_point));
 
-  const sourceLink = macroSummary.macro_source_url
-    ? ` Source: <a href="${macroSummary.macro_source_url}">${macroSummary.macro_source}</a>.`
-    : "";
+  const activeInputs = scenario.covariates.length ? scenario.covariates : state.manifest.coreCovariates || [];
+  const sourceLinks = Object.entries(macroSummary.macro_sources || {})
+    .filter(([column]) => activeInputs.includes(column))
+    .map(([, url]) => url)
+    .filter((url, index, urls) => urls.indexOf(url) === index)
+    .map((url) => `<a href="${escapeHtml(url)}">${escapeHtml(new URL(url).hostname || url)}</a>`)
+    .join(", ");
+  const sourceSentence = sourceLinks ? ` Sources: ${sourceLinks}.` : "";
   byId("macroSource").innerHTML = scenario.covariates.length
-    ? `Active Chronos input includes <strong>${scenario.covariates.join("</strong> and <strong>")}</strong>. Latest macro point: ${formatDate(macroSummary.macro_last_timestamp)}.${sourceLink}`
-    : `Active Chronos input uses BTC close prices only. Latest macro point for comparison: ${formatDate(macroSummary.macro_last_timestamp)}.${sourceLink}`;
+    ? `Active Chronos input includes <strong>${escapeHtml(covariateList(scenario.covariates))}</strong>. Model-aligned macro point: ${formatDate(macroSummary.macro_aligned_end || macroSummary.history_end || macroSummary.macro_last_timestamp)}.${sourceSentence}`
+    : `Active Chronos input uses BTC close prices only. Model-aligned macro point for comparison: ${formatDate(macroSummary.macro_aligned_end || macroSummary.history_end || macroSummary.macro_last_timestamp)}.${sourceSentence}`;
 }
 
 function renderForecastRows(rows) {
@@ -188,6 +257,7 @@ function renderScenarioRows() {
           <td>${formatUsd(summary.last_point)}</td>
           <td>${formatUsdDelta(delta)}</td>
           <td>${formatUsd(summary.last_low)} - ${formatUsd(summary.last_high)}</td>
+          <td>${covariateList(scenario.covariates)}</td>
         </tr>
       `;
     })
@@ -354,7 +424,7 @@ async function init() {
     await selectScenario(manifest.default);
   } catch (error) {
     byId("forecastRows").innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
-    byId("scenarioRows").innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
+    byId("scenarioRows").innerHTML = `<tr><td colspan="5">${error.message}</td></tr>`;
   }
 }
 

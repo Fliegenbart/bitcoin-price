@@ -1,6 +1,6 @@
 import unittest
 
-from bitcoin_chronos.forecast import selected_m2_covariates
+from bitcoin_chronos.forecast import selected_macro_covariates, selected_m2_covariates
 
 
 class ForecastCliTests(unittest.TestCase):
@@ -14,6 +14,13 @@ class ForecastCliTests(unittest.TestCase):
     def test_selected_m2_covariates_rejects_unknown_column(self):
         with self.assertRaises(ValueError):
             selected_m2_covariates("m2_global_supply_usd,unknown_column", enabled=True)
+
+    def test_selected_macro_covariates_defaults_to_all_known_macro_columns(self):
+        selected = selected_macro_covariates("all", enabled=True)
+
+        self.assertIn("fed_net_liquidity_usd", selected)
+        self.assertIn("dxy_inverse", selected)
+        self.assertIn("fear_greed_index", selected)
 
 
 if __name__ == "__main__":

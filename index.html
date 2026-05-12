@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Multivariate zero-shot Bitcoin price forecast generated with Amazon Chronos-2 from BTCUSDT daily candles and Global M2 covariates."
+      content="Multivariate zero-shot Bitcoin price forecast generated with Amazon Chronos-2 from BTCUSDT daily candles, liquidity, dollar, sentiment, and stablecoin covariates."
     />
     <title>Bitcoin Chronos-2 Forecast</title>
     <link rel="stylesheet" href="/styles.css" />
@@ -17,7 +17,8 @@
           <h1>Bitcoin Chronos-2 Forecast</h1>
           <p>
             Multivariate zero-shot BTCUSDT daily forecast from historical Binance close prices,
-            Global M2 Supply, and M2 Growth YoY. This is a model experiment, not financial advice.
+            global liquidity, Fed liquidity, inverse DXY, Fear & Greed, USDT supply changes, and optional M2 inputs.
+            This is a model experiment, not financial advice.
           </p>
         </div>
         <div class="run-meta" aria-live="polite">
@@ -51,12 +52,40 @@
           <span>M2 Growth YoY</span>
           <strong id="m2Growth">-</strong>
         </article>
+        <article>
+          <span>G4 Global Liquidity</span>
+          <strong id="g4Liquidity">-</strong>
+        </article>
+        <article>
+          <span>Fed Net Liquidity</span>
+          <strong id="fedLiquidity">-</strong>
+        </article>
+        <article>
+          <span>DXY Inverse</span>
+          <strong id="dxyInverse">-</strong>
+        </article>
+        <article>
+          <span>Fear & Greed</span>
+          <strong id="fearGreed">-</strong>
+        </article>
+        <article>
+          <span>USDT Net Supply Change</span>
+          <strong id="usdtNet">-</strong>
+        </article>
+        <article>
+          <span>USDT Mint / Burn Proxy</span>
+          <strong id="usdtMintBurn">-</strong>
+        </article>
       </section>
 
       <section class="macro-panel" aria-label="Macro covariates">
         <div class="section-title">
           <h2>Multivariate macro inputs</h2>
-          <a href="/data/latest/macro_covariates.csv">Download M2 CSV</a>
+          <a href="/data/latest/macro_covariates.csv">Download macro CSV</a>
+        </div>
+        <div class="core-inputs" aria-label="Always-on macro covariates">
+          <span>Core macro inputs stay on</span>
+          <strong id="coreInputs">-</strong>
         </div>
         <div class="covariate-controls" aria-label="Covariate controls">
           <label class="covariate-toggle">
@@ -78,7 +107,7 @@
             <strong id="deltaBaseline">-</strong>
           </div>
           <div>
-            <span>Final vs both-on</span>
+            <span>Final vs full macro</span>
             <strong id="deltaFull">-</strong>
           </div>
         </div>
@@ -100,11 +129,12 @@
                 <th>Final point</th>
                 <th>Vs price-only</th>
                 <th>Final 10-90%</th>
+                <th>Inputs</th>
               </tr>
             </thead>
             <tbody id="scenarioRows">
               <tr>
-                <td colspan="4">Loading scenarios...</td>
+                <td colspan="5">Loading scenarios...</td>
               </tr>
             </tbody>
           </table>

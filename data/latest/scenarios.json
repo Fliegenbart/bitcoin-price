@@ -1,6 +1,15 @@
 {
   "baseline": "price_only",
-  "default": "m2_both",
+  "default": "macro_all",
+  "coreCovariates": [
+    "g4_global_liquidity_usd",
+    "fed_net_liquidity_usd",
+    "dxy_inverse",
+    "fear_greed_index",
+    "usdt_supply_net_change_usd",
+    "usdt_supply_mint_proxy_usd",
+    "usdt_supply_burn_proxy_usd"
+  ],
   "scenarios": {
     "price_only": {
       "label": "Price only",
@@ -10,29 +19,73 @@
       "svg": "/data/latest/scenarios/price_only/forecast.svg",
       "logSvg": "/data/latest/scenarios/price_only/forecast_log.svg"
     },
-    "m2_supply": {
-      "label": "M2 Supply",
-      "covariates": ["m2_global_supply_usd"],
-      "summary": "/data/latest/scenarios/m2_supply/summary.json",
-      "forecast": "/data/latest/scenarios/m2_supply/forecast.csv",
-      "svg": "/data/latest/scenarios/m2_supply/forecast.svg",
-      "logSvg": "/data/latest/scenarios/m2_supply/forecast_log.svg"
+    "macro_core": {
+      "label": "Core macro",
+      "covariates": [
+        "g4_global_liquidity_usd",
+        "fed_net_liquidity_usd",
+        "dxy_inverse",
+        "fear_greed_index",
+        "usdt_supply_net_change_usd",
+        "usdt_supply_mint_proxy_usd",
+        "usdt_supply_burn_proxy_usd"
+      ],
+      "summary": "/data/latest/scenarios/macro_core/summary.json",
+      "forecast": "/data/latest/scenarios/macro_core/forecast.csv",
+      "svg": "/data/latest/scenarios/macro_core/forecast.svg",
+      "logSvg": "/data/latest/scenarios/macro_core/forecast_log.svg"
     },
-    "m2_growth": {
-      "label": "M2 Growth YoY",
-      "covariates": ["m2_growth_yoy_pct"],
-      "summary": "/data/latest/scenarios/m2_growth/summary.json",
-      "forecast": "/data/latest/scenarios/m2_growth/forecast.csv",
-      "svg": "/data/latest/scenarios/m2_growth/forecast.svg",
-      "logSvg": "/data/latest/scenarios/m2_growth/forecast_log.svg"
+    "macro_m2_supply": {
+      "label": "Core macro + M2 Supply",
+      "covariates": [
+        "g4_global_liquidity_usd",
+        "fed_net_liquidity_usd",
+        "dxy_inverse",
+        "fear_greed_index",
+        "usdt_supply_net_change_usd",
+        "usdt_supply_mint_proxy_usd",
+        "usdt_supply_burn_proxy_usd",
+        "m2_global_supply_usd"
+      ],
+      "summary": "/data/latest/scenarios/macro_m2_supply/summary.json",
+      "forecast": "/data/latest/scenarios/macro_m2_supply/forecast.csv",
+      "svg": "/data/latest/scenarios/macro_m2_supply/forecast.svg",
+      "logSvg": "/data/latest/scenarios/macro_m2_supply/forecast_log.svg"
     },
-    "m2_both": {
-      "label": "M2 Supply + M2 Growth YoY",
-      "covariates": ["m2_global_supply_usd", "m2_growth_yoy_pct"],
-      "summary": "/data/latest/scenarios/m2_both/summary.json",
-      "forecast": "/data/latest/scenarios/m2_both/forecast.csv",
-      "svg": "/data/latest/scenarios/m2_both/forecast.svg",
-      "logSvg": "/data/latest/scenarios/m2_both/forecast_log.svg"
+    "macro_m2_growth": {
+      "label": "Core macro + M2 Growth YoY",
+      "covariates": [
+        "g4_global_liquidity_usd",
+        "fed_net_liquidity_usd",
+        "dxy_inverse",
+        "fear_greed_index",
+        "usdt_supply_net_change_usd",
+        "usdt_supply_mint_proxy_usd",
+        "usdt_supply_burn_proxy_usd",
+        "m2_growth_yoy_pct"
+      ],
+      "summary": "/data/latest/scenarios/macro_m2_growth/summary.json",
+      "forecast": "/data/latest/scenarios/macro_m2_growth/forecast.csv",
+      "svg": "/data/latest/scenarios/macro_m2_growth/forecast.svg",
+      "logSvg": "/data/latest/scenarios/macro_m2_growth/forecast_log.svg"
+    },
+    "macro_all": {
+      "label": "Core macro + both M2 inputs",
+      "covariates": [
+        "g4_global_liquidity_usd",
+        "fed_net_liquidity_usd",
+        "dxy_inverse",
+        "fear_greed_index",
+        "usdt_supply_net_change_usd",
+        "usdt_supply_mint_proxy_usd",
+        "usdt_supply_burn_proxy_usd",
+        "m2_global_supply_usd",
+        "m2_growth_yoy_pct"
+      ],
+      "summary": "/data/latest/scenarios/macro_all/summary.json",
+      "forecast": "/data/latest/scenarios/macro_all/forecast.csv",
+      "svg": "/data/latest/scenarios/macro_all/forecast.svg",
+      "logSvg": "/data/latest/scenarios/macro_all/forecast_log.svg"
     }
   }
 }

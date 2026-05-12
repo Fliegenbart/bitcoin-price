@@ -16,7 +16,8 @@ from bitcoin_chronos.macro import (
     BGEOMETRICS_M2_URL,
     BGEOMETRICS_SOURCE,
     MACRO_COVARIATE_COLUMNS,
-    fetch_bgeometrics_macro,
+    MACRO_SOURCE_URLS,
+    fetch_macro_covariates,
 )
 from bitcoin_chronos.outputs import (
     forecast_summary,
@@ -79,14 +80,20 @@ def parse_quantiles(raw: str) -> list[float]:
     return [float(part.strip()) for part in raw.split(",") if part.strip()]
 
 
-def selected_m2_covariates(raw: str, enabled: bool) -> list[str]:
+def selected_macro_covariates(raw: str, enabled: bool) -> list[str]:
     if not enabled or raw.strip().lower() == "none":
         return []
+    if raw.strip().lower() == "all":
+        return MACRO_COVARIATE_COLUMNS.copy()
     requested = [part.strip() for part in raw.split(",") if part.strip()]
     unknown = [column for column in requested if column not in MACRO_COVARIATE_COLUMNS]
     if unknown:
-        raise ValueError(f"Unknown M2 covariate columns: {', '.join(unknown)}")
+        raise ValueError(f"Unknown macro covariate columns: {', '.join(unknown)}")
     return requested
+
+
+def selected_m2_covariates(raw: str, enabled: bool) -> list[str]:
+    return selected_macro_covariates(raw, enabled)
 
 
 def normalize_forecast_frame(predictions: pd.DataFrame) -> pd.DataFrame:
@@ -120,13 +127,22 @@ def run_forecast(args: argparse.Namespace) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    covariate_columns = selected_m2_covariates(args.m2_covariate_columns, args.m2_covariates)
+    raw_covariates = args.m2_covariate_columns or args.macro_covariate_columns
+    covariate_columns = selected_macro_covariates(raw_covariates, args.macro_covariates and args.m2_covariates)
     macro = pd.DataFrame()
     if covariate_columns:
-        macro = fetch_bgeometrics_macro()
+        macro = fetch_macro_covariates()
         macro.to_csv(output_dir / "macro_covariates_raw.csv", index=False)
-        history = merge_macro_covariates(history, macro)
-        history[["timestamp", *MACRO_COVARIATE_COLUMNS]].to_csv(output_dir / "macro_covariates_aligned.csv", index=False)
+        history = merge_macro_covariates(
+            history,
+            macro,
+            required=covariate_columns,
+            drop_incomplete_start=True,
+        )
+        history[["timestamp", *[column for column in MACRO_COVARIATE_COLUMNS if column in history.columns]]].to_csv(
+            output_dir / "macro_covariates_aligned.csv",
+            index=False,
+        )
 
     context = build_context_frame(
         history,
@@ -166,14 +182,22 @@ def run_forecast(args: argparse.Namespace) -> Path:
         }
     )
     if covariate_columns:
+        latest_macro_values = {
+            column: float(history.iloc[-1][column])
+            for column in MACRO_COVARIATE_COLUMNS
+            if column in history.columns and pd.notna(history.iloc[-1][column])
+        }
         summary.update(
             {
                 "macro_source": BGEOMETRICS_SOURCE,
                 "macro_source_url": BGEOMETRICS_M2_URL,
+                "macro_sources": MACRO_SOURCE_URLS,
                 "macro_rows": int(len(macro)),
                 "macro_last_timestamp": pd.Timestamp(macro.iloc[-1]["timestamp"]).isoformat(),
-                "m2_global_supply_usd_last": float(history.iloc[-1]["m2_global_supply_usd"]),
-                "m2_growth_yoy_pct_last": float(history.iloc[-1]["m2_growth_yoy_pct"]),
+                "macro_aligned_start": pd.Timestamp(history.iloc[0]["timestamp"]).isoformat(),
+                "macro_aligned_end": pd.Timestamp(history.iloc[-1]["timestamp"]).isoformat(),
+                "macro_latest_values": latest_macro_values,
+                **{f"{column}_last": value for column, value in latest_macro_values.items()},
             }
         )
     write_summary_json(summary, output_dir / "summary.json")
@@ -200,14 +224,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-m2-covariates",
         action="store_false",
         dest="m2_covariates",
-        help="Disable BGeometrics M2 Global Supply and M2 Growth YoY past covariates.",
+        help="Backward-compatible alias to disable macro covariates.",
     )
     parser.add_argument(
         "--m2-covariate-columns",
-        default=",".join(MACRO_COVARIATE_COLUMNS),
-        help="Comma-separated M2 covariates to pass to Chronos-2, or 'none'.",
+        default=None,
+        help="Backward-compatible comma-separated macro covariates to pass to Chronos-2, or 'none'.",
+    )
+    parser.add_argument(
+        "--no-macro-covariates",
+        action="store_false",
+        dest="macro_covariates",
+        help="Disable all macro covariates.",
+    )
+    parser.add_argument(
+        "--macro-covariate-columns",
+        default="all",
+        help="Comma-separated macro covariates to pass to Chronos-2, 'all', or 'none'.",
     )
     parser.set_defaults(m2_covariates=True)
+    parser.set_defaults(macro_covariates=True)
     return parser
 
 

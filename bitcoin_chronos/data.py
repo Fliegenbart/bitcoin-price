@@ -55,7 +55,12 @@ def build_context_frame(
     return context[["id", "timestamp", "close", *covariate_columns]]
 
 
-def merge_macro_covariates(history: pd.DataFrame, macro: pd.DataFrame) -> pd.DataFrame:
+def merge_macro_covariates(
+    history: pd.DataFrame,
+    macro: pd.DataFrame,
+    required: list[str] | None = None,
+    drop_incomplete_start: bool = False,
+) -> pd.DataFrame:
     """Attach latest known macro covariates to each historical BTC candle."""
     history_sorted = history.copy()
     history_sorted["timestamp"] = pd.to_datetime(history_sorted["timestamp"], utc=True)
@@ -71,9 +76,13 @@ def merge_macro_covariates(history: pd.DataFrame, macro: pd.DataFrame) -> pd.Dat
         on="timestamp",
         direction="backward",
     )
-    required = ["m2_global_supply_usd", "m2_growth_yoy_pct"]
+    required = required or [column for column in macro_sorted.columns if column != "timestamp"]
     if merged[required].isna().any().any():
-        raise ValueError("Macro covariates do not cover the full Bitcoin history.")
+        if not drop_incomplete_start:
+            raise ValueError("Macro covariates do not cover the full Bitcoin history.")
+        merged = merged.dropna(subset=required)
+        if merged.empty:
+            raise ValueError("Macro covariates do not overlap with Bitcoin history.")
     return merged.reset_index(drop=True)
 
 

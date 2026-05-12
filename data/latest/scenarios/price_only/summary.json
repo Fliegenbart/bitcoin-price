@@ -1,8 +1,9 @@
 {
+  "covariates": [],
   "device": "cpu",
   "first_point": 82584.2265625,
   "first_timestamp": "2026-05-12T00:00:00",
-  "generated_at": "2026-05-12T21:46:11.177815+00:00",
+  "generated_at": "2026-05-12T22:59:45.705073+00:00",
   "history_end": "2026-05-11T00:00:00+00:00",
   "history_rows": 3190,
   "history_start": "2017-08-17T00:00:00+00:00",

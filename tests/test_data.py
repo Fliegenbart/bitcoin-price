@@ -102,10 +102,29 @@ class BinanceDataTests(unittest.TestCase):
             }
         )
 
-        merged = merge_macro_covariates(history, macro)
+        merged = merge_macro_covariates(history, macro, required=["m2_global_supply_usd", "m2_growth_yoy_pct"])
 
         self.assertEqual(merged["m2_global_supply_usd"].tolist(), [120.0, 120.0, 121.0])
         self.assertEqual(merged["m2_growth_yoy_pct"].tolist(), [8.0, 8.0, 8.5])
+
+    def test_merge_macro_covariates_drops_rows_before_macro_coverage(self):
+        history = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
+                "close": [100.0, 101.0],
+            }
+        )
+        macro = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-02"], utc=True),
+                "fear_greed_index": [45.0],
+            }
+        )
+
+        merged = merge_macro_covariates(history, macro, required=["fear_greed_index"], drop_incomplete_start=True)
+
+        self.assertEqual(merged["close"].tolist(), [101.0])
+        self.assertEqual(merged["fear_greed_index"].tolist(), [45.0])
 
     def test_interval_to_pandas_freq_maps_common_crypto_intervals(self):
         self.assertEqual(interval_to_pandas_freq("1d"), "D")

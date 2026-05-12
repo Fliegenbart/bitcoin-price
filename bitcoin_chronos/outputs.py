@@ -65,7 +65,10 @@ def write_report(summary: dict[str, Any], path: Path) -> None:
     if summary.get("covariates"):
         covariates = "\n\n## Macro covariates\n\n"
         covariates += f"- Columns: {', '.join(summary['covariates'])}\n"
-        if summary.get("macro_source"):
+        if summary.get("macro_sources"):
+            source_urls = sorted({summary["macro_sources"][column] for column in summary["covariates"] if column in summary["macro_sources"]})
+            covariates += f"- Sources: {', '.join(source_urls)}\n"
+        elif summary.get("macro_source"):
             covariates += f"- Source: {summary['macro_source']}\n"
 
     report = f"""# Bitcoin Chronos-2 Forecast
