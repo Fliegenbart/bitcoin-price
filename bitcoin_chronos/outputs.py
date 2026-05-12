@@ -127,13 +127,14 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     total_seconds = max((max_ts - min_ts).total_seconds(), 1.0)
 
     width = 1100
-    height = 560
+    height = 620
     left = 80
     right = 40
-    top = 40
-    bottom = 70
+    top = 72
+    bottom = 115
     plot_width = width - left - right
     plot_height = height - top - bottom
+    axis_y = height - bottom
 
     def xy(ts: pd.Timestamp, value: float) -> tuple[float, float]:
         x = left + ((pd.Timestamp(ts) - min_ts).total_seconds() / total_seconds) * plot_width
@@ -166,6 +167,16 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
         _, y = xy(min_ts, value)
         y_ticks.append((value, y))
 
+    x_ticks = []
+    for i in range(6):
+        fraction = i / 5
+        tick_ts = min_ts + (max_ts - min_ts) * fraction
+        x, _ = xy(tick_ts, min_value)
+        x_ticks.append((tick_ts, x))
+
+    forecast_start_ts = forecast_points["timestamp"].min()
+    forecast_start_x, _ = xy(forecast_start_ts, min_value)
+
     title = "BTCUSDT Chronos-2 Forecast"
     last_history = float(history_tail.iloc[-1]["close"]) if not history_tail.empty else 0.0
     last_forecast = float(forecast_points.iloc[-1][point_column]) if not forecast_points.empty else 0.0
@@ -179,10 +190,18 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     for value, y in y_ticks:
         svg.append(f'<line x1="{left}" y1="{y:.1f}" x2="{width - right}" y2="{y:.1f}" stroke="#e5e7eb" stroke-width="1"/>')
         svg.append(f'<text x="{left - 10}" y="{y + 4:.1f}" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">{value:,.0f}</text>')
+    for tick_ts, x in x_ticks:
+        svg.append(f'<line class="x-axis-grid" x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{axis_y}" stroke="#f1f5f9" stroke-width="1"/>')
     svg.extend(
         [
-            f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height - bottom}" stroke="#9ca3af" stroke-width="1"/>',
-            f'<line x1="{left}" y1="{height - bottom}" x2="{width - right}" y2="{height - bottom}" stroke="#9ca3af" stroke-width="1"/>',
+            f'<line x1="{left}" y1="{top}" x2="{left}" y2="{axis_y}" stroke="#9ca3af" stroke-width="1"/>',
+            f'<line x1="{left}" y1="{axis_y}" x2="{width - right}" y2="{axis_y}" stroke="#9ca3af" stroke-width="1"/>',
+            *[
+                f'<text class="x-axis-label" x="{x:.1f}" y="{axis_y + 25}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">{pd.Timestamp(tick_ts).strftime("%Y-%m-%d")}</text>'
+                for tick_ts, x in x_ticks
+            ],
+            f'<line id="forecast-start-line" x1="{forecast_start_x:.1f}" y1="{top}" x2="{forecast_start_x:.1f}" y2="{axis_y}" stroke="#111827" stroke-width="1.3" stroke-dasharray="5 6" opacity="0.42"/>',
+            f'<text x="{forecast_start_x + 8:.1f}" y="{top + 15}" font-family="Arial, sans-serif" font-size="11" fill="#374151">forecast start</text>',
             f'<path id="probability-corridor" d="{corridor_path()}" fill="#dc2626" fill-opacity="0.13" stroke="none"/>'
             if not corridor_points.empty
             else "",

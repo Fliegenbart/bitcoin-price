@@ -148,13 +148,57 @@ h2 {
   letter-spacing: 0;
 }
 
-.chart-panel img {
-  display: block;
-  width: 100%;
-  height: auto;
+.chart-canvas {
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #ffffff;
+}
+
+.chart-canvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+}
+
+.chart-crosshair {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(17, 24, 39, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  max-width: min(260px, calc(100% - 16px));
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #111827;
+  box-shadow: 0 16px 35px rgba(17, 24, 39, 0.22);
+  color: #ffffff;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.chart-tooltip strong,
+.chart-tooltip span {
+  display: block;
+}
+
+.chart-tooltip strong {
+  margin-bottom: 3px;
+  font-size: 0.84rem;
+}
+
+.chart-tooltip span {
+  color: #d1d5db;
 }
 
 .chart-legend {

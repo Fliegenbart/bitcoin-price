@@ -68,10 +68,15 @@
           <h2>Recent price path and forecast</h2>
           <a href="/data/latest/forecast.csv">Download CSV</a>
         </div>
-        <img
-          src="/data/latest/forecast.svg"
-          alt="BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor"
-        />
+        <div class="chart-canvas" id="forecastChart">
+          <img
+            id="forecastChartImage"
+            src="/data/latest/forecast.svg"
+            alt="BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor"
+          />
+          <div class="chart-crosshair" id="chartCrosshair" hidden></div>
+          <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite" hidden></div>
+        </div>
         <div class="chart-legend" aria-label="Chart legend">
           <span><i class="legend-line history-line"></i>History</span>
           <span><i class="legend-line forecast-line"></i>Point forecast</span>

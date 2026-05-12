@@ -88,6 +88,31 @@ class ForecastOutputTests(unittest.TestCase):
         self.assertIn('id="probability-corridor"', svg)
         self.assertIn("10-90% probability corridor", svg)
 
+    def test_write_forecast_svg_draws_date_axis_and_forecast_start_line(self):
+        history = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
+                "close": [100.0, 101.0],
+            }
+        )
+        forecast = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-03", "2026-01-04"]),
+                "predictions": [102.0, 103.0],
+                "0.1": [95.0, 96.0],
+                "0.9": [110.0, 112.0],
+            }
+        )
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "forecast.svg"
+            write_forecast_svg(history, forecast, path)
+            svg = path.read_text(encoding="utf-8")
+
+        self.assertIn('class="x-axis-label"', svg)
+        self.assertIn("2026-01-01", svg)
+        self.assertIn('id="forecast-start-line"', svg)
+
     def test_write_report_mentions_macro_covariates_when_present(self):
         summary = {
             "horizon_steps": 90,

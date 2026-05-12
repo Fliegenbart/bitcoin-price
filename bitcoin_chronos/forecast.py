@@ -125,6 +125,7 @@ def run_forecast(args: argparse.Namespace) -> Path:
         covariate_columns=covariate_columns,
     )
     history.to_csv(output_dir / "history.csv", index=False)
+    history.tail(365)[["timestamp", "close"]].to_csv(output_dir / "history_tail.csv", index=False)
     context.to_csv(output_dir / "chronos_context.csv", index=False)
 
     pipeline = Chronos2Pipeline.from_pretrained(args.model, device_map=args.device)
