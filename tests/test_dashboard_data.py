@@ -19,6 +19,7 @@ class DashboardDataTests(unittest.TestCase):
                 "usdt_supply_net_change_usd",
                 "usdt_supply_mint_proxy_usd",
                 "usdt_supply_burn_proxy_usd",
+                "btc_power_law_price_usd",
             ],
             "macro_m2_supply": [
                 "g4_global_liquidity_usd",
@@ -28,6 +29,7 @@ class DashboardDataTests(unittest.TestCase):
                 "usdt_supply_net_change_usd",
                 "usdt_supply_mint_proxy_usd",
                 "usdt_supply_burn_proxy_usd",
+                "btc_power_law_price_usd",
                 "m2_global_supply_usd",
             ],
             "macro_m2_growth": [
@@ -38,6 +40,7 @@ class DashboardDataTests(unittest.TestCase):
                 "usdt_supply_net_change_usd",
                 "usdt_supply_mint_proxy_usd",
                 "usdt_supply_burn_proxy_usd",
+                "btc_power_law_price_usd",
                 "m2_growth_yoy_pct",
             ],
             "macro_all": [
@@ -48,6 +51,7 @@ class DashboardDataTests(unittest.TestCase):
                 "usdt_supply_net_change_usd",
                 "usdt_supply_mint_proxy_usd",
                 "usdt_supply_burn_proxy_usd",
+                "btc_power_law_price_usd",
                 "m2_global_supply_usd",
                 "m2_growth_yoy_pct",
             ],

@@ -11,12 +11,19 @@ from typing import Any
 import pandas as pd
 import requests
 
-from bitcoin_chronos.data import build_context_frame, merge_macro_covariates, parse_binance_klines
+from bitcoin_chronos.data import (
+    attach_power_law_covariate,
+    build_context_frame,
+    merge_macro_covariates,
+    parse_binance_klines,
+)
 from bitcoin_chronos.macro import (
     BGEOMETRICS_M2_URL,
     BGEOMETRICS_SOURCE,
+    EXTERNAL_MACRO_COVARIATE_COLUMNS,
     MACRO_COVARIATE_COLUMNS,
     MACRO_SOURCE_URLS,
+    POWER_LAW_COVARIATE_COLUMNS,
     fetch_macro_covariates,
 )
 from bitcoin_chronos.outputs import (
@@ -129,16 +136,21 @@ def run_forecast(args: argparse.Namespace) -> Path:
 
     raw_covariates = args.m2_covariate_columns or args.macro_covariate_columns
     covariate_columns = selected_macro_covariates(raw_covariates, args.macro_covariates and args.m2_covariates)
+    power_law_columns = [column for column in covariate_columns if column in POWER_LAW_COVARIATE_COLUMNS]
+    external_covariate_columns = [column for column in covariate_columns if column in EXTERNAL_MACRO_COVARIATE_COLUMNS]
     macro = pd.DataFrame()
-    if covariate_columns:
+    if power_law_columns:
+        history = attach_power_law_covariate(history)
+    if external_covariate_columns:
         macro = fetch_macro_covariates()
         macro.to_csv(output_dir / "macro_covariates_raw.csv", index=False)
         history = merge_macro_covariates(
             history,
             macro,
-            required=covariate_columns,
+            required=external_covariate_columns,
             drop_incomplete_start=True,
         )
+    if covariate_columns:
         history[["timestamp", *[column for column in MACRO_COVARIATE_COLUMNS if column in history.columns]]].to_csv(
             output_dir / "macro_covariates_aligned.csv",
             index=False,
@@ -193,7 +205,9 @@ def run_forecast(args: argparse.Namespace) -> Path:
                 "macro_source_url": BGEOMETRICS_M2_URL,
                 "macro_sources": MACRO_SOURCE_URLS,
                 "macro_rows": int(len(macro)),
-                "macro_last_timestamp": pd.Timestamp(macro.iloc[-1]["timestamp"]).isoformat(),
+                "macro_last_timestamp": pd.Timestamp(macro.iloc[-1]["timestamp"]).isoformat()
+                if not macro.empty
+                else pd.Timestamp(history.iloc[-1]["timestamp"]).isoformat(),
                 "macro_aligned_start": pd.Timestamp(history.iloc[0]["timestamp"]).isoformat(),
                 "macro_aligned_end": pd.Timestamp(history.iloc[-1]["timestamp"]).isoformat(),
                 "macro_latest_values": latest_macro_values,

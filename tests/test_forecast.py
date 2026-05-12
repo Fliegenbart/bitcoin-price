@@ -21,6 +21,7 @@ class ForecastCliTests(unittest.TestCase):
         self.assertIn("fed_net_liquidity_usd", selected)
         self.assertIn("dxy_inverse", selected)
         self.assertIn("fear_greed_index", selected)
+        self.assertIn("btc_power_law_price_usd", selected)
 
 
 if __name__ == "__main__":

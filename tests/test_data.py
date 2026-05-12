@@ -3,6 +3,7 @@ import unittest
 import pandas as pd
 
 from bitcoin_chronos.data import (
+    attach_power_law_covariate,
     build_context_frame,
     interval_to_milliseconds,
     interval_to_pandas_freq,
@@ -125,6 +126,20 @@ class BinanceDataTests(unittest.TestCase):
 
         self.assertEqual(merged["close"].tolist(), [101.0])
         self.assertEqual(merged["fear_greed_index"].tolist(), [45.0])
+
+    def test_attach_power_law_covariate_fits_log_time_price_curve(self):
+        origin = pd.Timestamp("2020-01-01", tz="UTC")
+        history = pd.DataFrame(
+            {
+                "timestamp": origin + pd.to_timedelta([1, 2, 4], unit="D"),
+                "close": [3.0, 12.0, 48.0],
+            }
+        )
+
+        enriched = attach_power_law_covariate(history, origin=origin)
+
+        self.assertIn("btc_power_law_price_usd", enriched.columns)
+        self.assertEqual([round(value, 6) for value in enriched["btc_power_law_price_usd"]], [3.0, 12.0, 48.0])
 
     def test_interval_to_pandas_freq_maps_common_crypto_intervals(self):
         self.assertEqual(interval_to_pandas_freq("1d"), "D")

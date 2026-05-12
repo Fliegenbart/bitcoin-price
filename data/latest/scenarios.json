@@ -8,7 +8,8 @@
     "fear_greed_index",
     "usdt_supply_net_change_usd",
     "usdt_supply_mint_proxy_usd",
-    "usdt_supply_burn_proxy_usd"
+    "usdt_supply_burn_proxy_usd",
+    "btc_power_law_price_usd"
   ],
   "scenarios": {
     "price_only": {
@@ -20,23 +21,7 @@
       "logSvg": "/data/latest/scenarios/price_only/forecast_log.svg"
     },
     "macro_core": {
-      "label": "Core macro",
-      "covariates": [
-        "g4_global_liquidity_usd",
-        "fed_net_liquidity_usd",
-        "dxy_inverse",
-        "fear_greed_index",
-        "usdt_supply_net_change_usd",
-        "usdt_supply_mint_proxy_usd",
-        "usdt_supply_burn_proxy_usd"
-      ],
-      "summary": "/data/latest/scenarios/macro_core/summary.json",
-      "forecast": "/data/latest/scenarios/macro_core/forecast.csv",
-      "svg": "/data/latest/scenarios/macro_core/forecast.svg",
-      "logSvg": "/data/latest/scenarios/macro_core/forecast_log.svg"
-    },
-    "macro_m2_supply": {
-      "label": "Core macro + M2 Supply",
+      "label": "Core macro + Power Law",
       "covariates": [
         "g4_global_liquidity_usd",
         "fed_net_liquidity_usd",
@@ -45,6 +30,24 @@
         "usdt_supply_net_change_usd",
         "usdt_supply_mint_proxy_usd",
         "usdt_supply_burn_proxy_usd",
+        "btc_power_law_price_usd"
+      ],
+      "summary": "/data/latest/scenarios/macro_core/summary.json",
+      "forecast": "/data/latest/scenarios/macro_core/forecast.csv",
+      "svg": "/data/latest/scenarios/macro_core/forecast.svg",
+      "logSvg": "/data/latest/scenarios/macro_core/forecast_log.svg"
+    },
+    "macro_m2_supply": {
+      "label": "Core macro + Power Law + M2 Supply",
+      "covariates": [
+        "g4_global_liquidity_usd",
+        "fed_net_liquidity_usd",
+        "dxy_inverse",
+        "fear_greed_index",
+        "usdt_supply_net_change_usd",
+        "usdt_supply_mint_proxy_usd",
+        "usdt_supply_burn_proxy_usd",
+        "btc_power_law_price_usd",
         "m2_global_supply_usd"
       ],
       "summary": "/data/latest/scenarios/macro_m2_supply/summary.json",
@@ -53,7 +56,7 @@
       "logSvg": "/data/latest/scenarios/macro_m2_supply/forecast_log.svg"
     },
     "macro_m2_growth": {
-      "label": "Core macro + M2 Growth YoY",
+      "label": "Core macro + Power Law + M2 Growth YoY",
       "covariates": [
         "g4_global_liquidity_usd",
         "fed_net_liquidity_usd",
@@ -62,6 +65,7 @@
         "usdt_supply_net_change_usd",
         "usdt_supply_mint_proxy_usd",
         "usdt_supply_burn_proxy_usd",
+        "btc_power_law_price_usd",
         "m2_growth_yoy_pct"
       ],
       "summary": "/data/latest/scenarios/macro_m2_growth/summary.json",
@@ -70,7 +74,7 @@
       "logSvg": "/data/latest/scenarios/macro_m2_growth/forecast_log.svg"
     },
     "macro_all": {
-      "label": "Core macro + both M2 inputs",
+      "label": "Core macro + Power Law + both M2 inputs",
       "covariates": [
         "g4_global_liquidity_usd",
         "fed_net_liquidity_usd",
@@ -79,6 +83,7 @@
         "usdt_supply_net_change_usd",
         "usdt_supply_mint_proxy_usd",
         "usdt_supply_burn_proxy_usd",
+        "btc_power_law_price_usd",
         "m2_global_supply_usd",
         "m2_growth_yoy_pct"
       ],

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Iterable, Sequence
 
 import pandas as pd
@@ -84,6 +85,37 @@ def merge_macro_covariates(
         if merged.empty:
             raise ValueError("Macro covariates do not overlap with Bitcoin history.")
     return merged.reset_index(drop=True)
+
+
+def attach_power_law_covariate(
+    history: pd.DataFrame,
+    origin: pd.Timestamp | str = "2009-01-03",
+    column: str = "btc_power_law_price_usd",
+) -> pd.DataFrame:
+    """Fit log(price) against log(days since origin) and attach the fitted trend."""
+    frame = history.copy()
+    timestamps = pd.to_datetime(frame["timestamp"], utc=True)
+    closes = pd.to_numeric(frame["close"], errors="coerce")
+
+    origin_ts = pd.Timestamp(origin)
+    origin_ts = origin_ts.tz_localize("UTC") if origin_ts.tzinfo is None else origin_ts.tz_convert("UTC")
+    days = (timestamps - origin_ts).dt.total_seconds() / 86_400
+    valid = (days > 0) & (closes > 0)
+    if int(valid.sum()) < 2:
+        raise ValueError("Power-law covariate needs at least two positive price points after the origin.")
+
+    x_values = [math.log(float(value)) for value in days[valid]]
+    y_values = [math.log(float(value)) for value in closes[valid]]
+    mean_x = sum(x_values) / len(x_values)
+    mean_y = sum(y_values) / len(y_values)
+    denominator = sum((value - mean_x) ** 2 for value in x_values)
+    if denominator == 0:
+        raise ValueError("Power-law covariate needs at least two distinct timestamps.")
+
+    slope = sum((x_value - mean_x) * (y_value - mean_y) for x_value, y_value in zip(x_values, y_values)) / denominator
+    intercept = mean_y - slope * mean_x
+    frame[column] = [math.exp(intercept + slope * math.log(float(day))) if day > 0 else pd.NA for day in days]
+    return frame
 
 
 def interval_to_pandas_freq(interval: str) -> str:

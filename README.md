@@ -69,6 +69,7 @@ The dashboard currently uses these public macro proxies:
 - `DXY inverse` from Yahoo Finance's DXY history, transformed as `100 / DXY`.
 - `Fear & Greed Index` from Alternative.me.
 - `USDT mint/burn proxy` from DeFiLlama Tether circulating supply changes.
+- `Power Law trend` fitted from the BTCUSDT history as `log(price) ~ log(days since Bitcoin genesis)`.
 
 BGeometrics describes Global M2 as an aggregate from 21 central banks. The USDT values are supply-change proxies, not an official historical Tether Treasury event ledger. Treat all covariates as model inputs, not as proof that one driver causes Bitcoin's next move.
 

@@ -37,6 +37,7 @@ const covariateLabels = {
   usdt_supply_net_change_usd: "USDT net supply change",
   usdt_supply_mint_proxy_usd: "USDT mint proxy",
   usdt_supply_burn_proxy_usd: "USDT burn proxy",
+  btc_power_law_price_usd: "Power Law trend",
 };
 
 function byId(id) {
@@ -208,6 +209,7 @@ function renderSummary(summary, scenario) {
     : "-";
   byId("usdtNet").textContent = formatUsdCompactDelta(latestMacroValue(macroSummary, "usdt_supply_net_change_usd"));
   byId("usdtMintBurn").textContent = `${formatUsdCompact(latestMacroValue(macroSummary, "usdt_supply_mint_proxy_usd"))} / ${formatUsdCompact(latestMacroValue(macroSummary, "usdt_supply_burn_proxy_usd"))}`;
+  byId("powerLaw").textContent = formatUsd(latestMacroValue(macroSummary, "btc_power_law_price_usd"));
   byId("coreInputs").textContent = covariateList(state.manifest.coreCovariates || []);
   byId("scenarioName").textContent = scenario.label;
   setDeltaText(byId("deltaBaseline"), Number(summary.last_point) - Number(baseline.last_point));
