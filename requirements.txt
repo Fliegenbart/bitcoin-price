@@ -1,0 +1,4 @@
+pandas
+requests
+torch
+chronos-forecasting>=2.0

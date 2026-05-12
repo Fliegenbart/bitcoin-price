@@ -1,0 +1,19 @@
+{
+  "device": "cpu",
+  "first_point": 82584.2265625,
+  "first_timestamp": "2026-05-12T00:00:00",
+  "generated_at": "2026-05-12T21:46:11.177815+00:00",
+  "history_end": "2026-05-11T00:00:00+00:00",
+  "history_rows": 3190,
+  "history_start": "2017-08-17T00:00:00+00:00",
+  "horizon_steps": 90,
+  "interval": "1d",
+  "last_high": 168372.59375,
+  "last_low": 55674.8125,
+  "last_observed_close": 81745.65,
+  "last_point": 101824.5,
+  "last_timestamp": "2026-08-09T00:00:00",
+  "model": "amazon/chronos-2",
+  "point_column": "predictions",
+  "symbol": "BTCUSDT"
+}
