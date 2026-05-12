@@ -14,6 +14,10 @@ const chartViewBox = {
   top: 72,
   bottom: 115,
 };
+const chartSources = {
+  linear: "/data/latest/forecast.svg",
+  log: "/data/latest/forecast_log.svg",
+};
 
 function byId(id) {
   return document.getElementById(id);
@@ -207,12 +211,42 @@ function setupChartHover(historyRows, forecastRows) {
   window.addEventListener("resize", hide);
 }
 
+function setupScaleToggle() {
+  const image = byId("forecastChartImage");
+  const crosshair = byId("chartCrosshair");
+  const tooltip = byId("chartTooltip");
+  const buttons = [...document.querySelectorAll("[data-chart-scale]")];
+  if (!image || !buttons.length) return;
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const scale = button.dataset.chartScale;
+      if (!chartSources[scale]) return;
+
+      image.src = chartSources[scale];
+      image.alt =
+        scale === "log"
+          ? "BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor on a logarithmic y-axis"
+          : "BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor";
+      crosshair.hidden = true;
+      tooltip.hidden = true;
+
+      buttons.forEach((item) => {
+        const isActive = item === button;
+        item.classList.toggle("is-active", isActive);
+        item.setAttribute("aria-pressed", String(isActive));
+      });
+    });
+  });
+}
+
 async function init() {
   try {
     const [summary, rows, historyRows] = await Promise.all([loadSummary(), loadForecastRows(), loadHistoryRows()]);
     renderSummary(summary);
     renderForecastRows(rows);
     setupChartHover(historyRows, rows);
+    setupScaleToggle();
   } catch (error) {
     byId("forecastRows").innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
   }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -81,7 +82,10 @@ This is a model forecast, not financial advice. Bitcoin can move sharply for rea
     path.write_text(report, encoding="utf-8")
 
 
-def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path) -> None:
+def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path, y_scale: str = "linear") -> None:
+    if y_scale not in {"linear", "log"}:
+        raise ValueError("y_scale must be 'linear' or 'log'")
+
     point_column = point_forecast_column(forecast)
     low_column = _optional_column(forecast, "0.1", 0.1)
     high_column = _optional_column(forecast, "0.9", 0.9)
@@ -120,6 +124,8 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     if min_value == max_value:
         min_value *= 0.95
         max_value *= 1.05
+    if y_scale == "log" and min_value <= 0:
+        raise ValueError("Log scale requires all chart values to be positive")
 
     timestamps = pd.to_datetime(combined["timestamp"])
     min_ts = timestamps.min()
@@ -136,9 +142,15 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     plot_height = height - top - bottom
     axis_y = height - bottom
 
+    def scale_value(value: float) -> float:
+        return math.log10(value) if y_scale == "log" else value
+
+    min_scaled_value = scale_value(min_value)
+    max_scaled_value = scale_value(max_value)
+
     def xy(ts: pd.Timestamp, value: float) -> tuple[float, float]:
         x = left + ((pd.Timestamp(ts) - min_ts).total_seconds() / total_seconds) * plot_width
-        y = top + (1.0 - ((value - min_value) / (max_value - min_value))) * plot_height
+        y = top + (1.0 - ((scale_value(value) - min_scaled_value) / (max_scaled_value - min_scaled_value))) * plot_height
         return x, y
 
     def path_for(kind: str) -> str:
@@ -163,7 +175,10 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
 
     y_ticks = []
     for i in range(5):
-        value = min_value + (max_value - min_value) * i / 4
+        if y_scale == "log":
+            value = 10 ** (min_scaled_value + (max_scaled_value - min_scaled_value) * i / 4)
+        else:
+            value = min_value + (max_value - min_value) * i / 4
         _, y = xy(min_ts, value)
         y_ticks.append((value, y))
 
@@ -178,14 +193,15 @@ def write_forecast_svg(history: pd.DataFrame, forecast: pd.DataFrame, path: Path
     forecast_start_x, _ = xy(forecast_start_ts, min_value)
 
     title = "BTCUSDT Chronos-2 Forecast"
+    subtitle_suffix = " | Y scale: log scale" if y_scale == "log" else ""
     last_history = float(history_tail.iloc[-1]["close"]) if not history_tail.empty else 0.0
     last_forecast = float(forecast_points.iloc[-1][point_column]) if not forecast_points.empty else 0.0
 
     svg = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" data-y-scale="{y_scale}" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
         '<rect width="100%" height="100%" fill="#ffffff"/>',
         f'<text x="{left}" y="26" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#111827">{escape(title)}</text>',
-        f'<text x="{left}" y="50" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Last history close: {last_history:,.2f} | Last forecast: {last_forecast:,.2f}</text>',
+        f'<text x="{left}" y="50" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Last history close: {last_history:,.2f} | Last forecast: {last_forecast:,.2f}{subtitle_suffix}</text>',
     ]
     for value, y in y_ticks:
         svg.append(f'<line x1="{left}" y1="{y:.1f}" x2="{width - right}" y2="{y:.1f}" stroke="#e5e7eb" stroke-width="1"/>')

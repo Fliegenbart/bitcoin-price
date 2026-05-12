@@ -170,6 +170,7 @@ def run_forecast(args: argparse.Namespace) -> Path:
     write_summary_json(summary, output_dir / "summary.json")
     write_report(summary, output_dir / "report.md")
     write_forecast_svg(history, forecast, output_dir / "forecast.svg")
+    write_forecast_svg(history, forecast, output_dir / "forecast_log.svg", y_scale="log")
 
     return output_dir
 

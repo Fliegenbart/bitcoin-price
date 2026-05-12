@@ -113,6 +113,30 @@ class ForecastOutputTests(unittest.TestCase):
         self.assertIn("2026-01-01", svg)
         self.assertIn('id="forecast-start-line"', svg)
 
+    def test_write_forecast_svg_can_render_log_scale(self):
+        history = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True),
+                "close": [1_000.0, 10_000.0],
+            }
+        )
+        forecast = pd.DataFrame(
+            {
+                "timestamp": pd.to_datetime(["2026-01-03", "2026-01-04"]),
+                "predictions": [20_000.0, 40_000.0],
+                "0.1": [12_000.0, 18_000.0],
+                "0.9": [30_000.0, 60_000.0],
+            }
+        )
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "forecast-log.svg"
+            write_forecast_svg(history, forecast, path, y_scale="log")
+            svg = path.read_text(encoding="utf-8")
+
+        self.assertIn('data-y-scale="log"', svg)
+        self.assertIn("log scale", svg)
+
     def test_write_report_mentions_macro_covariates_when_present(self):
         summary = {
             "horizon_steps": 90,
