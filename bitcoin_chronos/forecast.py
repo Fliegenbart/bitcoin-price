@@ -79,6 +79,16 @@ def parse_quantiles(raw: str) -> list[float]:
     return [float(part.strip()) for part in raw.split(",") if part.strip()]
 
 
+def selected_m2_covariates(raw: str, enabled: bool) -> list[str]:
+    if not enabled or raw.strip().lower() == "none":
+        return []
+    requested = [part.strip() for part in raw.split(",") if part.strip()]
+    unknown = [column for column in requested if column not in MACRO_COVARIATE_COLUMNS]
+    if unknown:
+        raise ValueError(f"Unknown M2 covariate columns: {', '.join(unknown)}")
+    return requested
+
+
 def normalize_forecast_frame(predictions: pd.DataFrame) -> pd.DataFrame:
     frame = predictions.reset_index() if not isinstance(predictions.index, pd.RangeIndex) else predictions.copy()
     if "item_id" in frame.columns and "id" not in frame.columns:
@@ -110,14 +120,13 @@ def run_forecast(args: argparse.Namespace) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    covariate_columns: list[str] = []
+    covariate_columns = selected_m2_covariates(args.m2_covariate_columns, args.m2_covariates)
     macro = pd.DataFrame()
-    if args.m2_covariates:
+    if covariate_columns:
         macro = fetch_bgeometrics_macro()
         macro.to_csv(output_dir / "macro_covariates_raw.csv", index=False)
         history = merge_macro_covariates(history, macro)
-        covariate_columns = MACRO_COVARIATE_COLUMNS.copy()
-        history[["timestamp", *covariate_columns]].to_csv(output_dir / "macro_covariates_aligned.csv", index=False)
+        history[["timestamp", *MACRO_COVARIATE_COLUMNS]].to_csv(output_dir / "macro_covariates_aligned.csv", index=False)
 
     context = build_context_frame(
         history,
@@ -192,6 +201,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_false",
         dest="m2_covariates",
         help="Disable BGeometrics M2 Global Supply and M2 Growth YoY past covariates.",
+    )
+    parser.add_argument(
+        "--m2-covariate-columns",
+        default=",".join(MACRO_COVARIATE_COLUMNS),
+        help="Comma-separated M2 covariates to pass to Chronos-2, or 'none'.",
     )
     parser.set_defaults(m2_covariates=True)
     return parser

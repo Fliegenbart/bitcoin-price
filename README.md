@@ -25,6 +25,8 @@ TRANSFORMERS_NO_TF=1 USE_TF=0 python3 -m bitcoin_chronos.forecast \
 
 Use `--device cuda` only when the GPU is free.
 Use `--no-m2-covariates` if you want a price-only baseline run.
+Use `--m2-covariate-columns m2_global_supply_usd` or `--m2-covariate-columns m2_growth_yoy_pct`
+to run a one-variable ablation.
 
 ## Outputs
 
@@ -49,6 +51,12 @@ The repository also contains a static Vercel dashboard:
 - `data/latest/*`
 
 It shows the latest generated forecast from `data/latest`.
+It also includes four covariate scenarios under `data/latest/scenarios`:
+
+- price only
+- M2 Supply only
+- M2 Growth YoY only
+- M2 Supply + M2 Growth YoY
 
 ## Macro Data Source
 

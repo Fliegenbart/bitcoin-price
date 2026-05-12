@@ -58,9 +58,57 @@
           <h2>Multivariate macro inputs</h2>
           <a href="/data/latest/macro_covariates.csv">Download M2 CSV</a>
         </div>
+        <div class="covariate-controls" aria-label="Covariate controls">
+          <label class="covariate-toggle">
+            <input id="toggleM2Supply" type="checkbox" data-covariate="m2_global_supply_usd" checked />
+            <span>Global M2 Supply</span>
+          </label>
+          <label class="covariate-toggle">
+            <input id="toggleM2Growth" type="checkbox" data-covariate="m2_growth_yoy_pct" checked />
+            <span>M2 Growth YoY</span>
+          </label>
+        </div>
+        <div class="scenario-impact" aria-label="Selected scenario impact">
+          <div>
+            <span>Active scenario</span>
+            <strong id="scenarioName">-</strong>
+          </div>
+          <div>
+            <span>Final vs price-only</span>
+            <strong id="deltaBaseline">-</strong>
+          </div>
+          <div>
+            <span>Final vs both-on</span>
+            <strong id="deltaFull">-</strong>
+          </div>
+        </div>
         <p id="macroSource">
           Loading M2 source...
         </p>
+      </section>
+
+      <section class="table-panel" aria-label="Covariate scenario comparison">
+        <div class="section-title">
+          <h2>Covariate impact</h2>
+          <a href="/data/latest/scenarios.json">Open scenarios JSON</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Final point</th>
+                <th>Vs price-only</th>
+                <th>Final 10-90%</th>
+              </tr>
+            </thead>
+            <tbody id="scenarioRows">
+              <tr>
+                <td colspan="4">Loading scenarios...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="chart-panel" aria-label="Forecast chart">

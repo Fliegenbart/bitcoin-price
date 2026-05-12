@@ -14,9 +14,14 @@ const chartViewBox = {
   top: 72,
   bottom: 115,
 };
-const chartSources = {
-  linear: "/data/latest/forecast.svg",
-  log: "/data/latest/forecast_log.svg",
+const state = {
+  manifest: null,
+  selectedScale: "linear",
+  selectedScenario: "m2_both",
+  summaries: {},
+  forecasts: {},
+  historyRows: [],
+  hoverPoints: [],
 };
 
 function byId(id) {
@@ -45,6 +50,24 @@ function formatUsdTrillions(value) {
   return `$${money.format(Number(value) / 1_000_000_000_000)}T`;
 }
 
+function formatUsd(value) {
+  if (!Number.isFinite(Number(value))) return "-";
+  return `$${money.format(Number(value))}`;
+}
+
+function formatUsdDelta(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return "-";
+  const sign = numericValue > 0 ? "+" : numericValue < 0 ? "-" : "";
+  return `${sign}$${money.format(Math.abs(numericValue))}`;
+}
+
+function setDeltaText(element, value) {
+  element.textContent = formatUsdDelta(value);
+  element.classList.toggle("delta-positive", Number(value) > 0);
+  element.classList.toggle("delta-negative", Number(value) < 0);
+}
+
 function parseCsv(csv) {
   const [headerLine, ...lines] = csv.trim().split(/\r?\n/);
   const headers = headerLine.split(",");
@@ -54,18 +77,18 @@ function parseCsv(csv) {
   });
 }
 
-async function loadSummary() {
-  const response = await fetch("/data/latest/summary.json");
+async function loadJson(path, label) {
+  const response = await fetch(path);
   if (!response.ok) {
-    throw new Error(`Could not load summary: ${response.status}`);
+    throw new Error(`Could not load ${label}: ${response.status}`);
   }
   return response.json();
 }
 
-async function loadForecastRows() {
-  const response = await fetch("/data/latest/forecast.csv");
+async function loadCsv(path, label) {
+  const response = await fetch(path);
   if (!response.ok) {
-    throw new Error(`Could not load forecast CSV: ${response.status}`);
+    throw new Error(`Could not load ${label}: ${response.status}`);
   }
   return parseCsv(await response.text());
 }
@@ -78,20 +101,60 @@ async function loadHistoryRows() {
   return parseCsv(await response.text());
 }
 
-function renderSummary(summary) {
+async function getScenarioSummary(key) {
+  if (!state.summaries[key]) {
+    const scenario = state.manifest.scenarios[key];
+    state.summaries[key] = await loadJson(scenario.summary, `${scenario.label} summary`);
+  }
+  return state.summaries[key];
+}
+
+async function getScenarioForecast(key) {
+  if (!state.forecasts[key]) {
+    const scenario = state.manifest.scenarios[key];
+    state.forecasts[key] = await loadCsv(scenario.forecast, `${scenario.label} forecast`);
+  }
+  return state.forecasts[key];
+}
+
+function scenarioKeyFromControls() {
+  const covariates = [];
+  if (byId("toggleM2Supply").checked) covariates.push("m2_global_supply_usd");
+  if (byId("toggleM2Growth").checked) covariates.push("m2_growth_yoy_pct");
+  const wanted = covariates.join("|");
+  return Object.entries(state.manifest.scenarios).find(([, scenario]) => scenario.covariates.join("|") === wanted)?.[0];
+}
+
+function syncCovariateControls(scenario) {
+  byId("toggleM2Supply").checked = scenario.covariates.includes("m2_global_supply_usd");
+  byId("toggleM2Growth").checked = scenario.covariates.includes("m2_growth_yoy_pct");
+}
+
+function renderSummary(summary, scenario) {
+  const baseline = state.summaries[state.manifest.baseline];
+  const both = state.summaries[state.manifest.default];
+  const macroSummary = both || summary;
+
   byId("model").textContent = summary.model;
   byId("generated").textContent = `Generated ${formatDate(summary.generated_at)}`;
-  byId("lastObserved").textContent = `$${money.format(summary.last_observed_close)}`;
-  byId("lastPoint").textContent = `$${money.format(summary.last_point)}`;
-  byId("range").textContent = `$${money.format(summary.last_low)} - $${money.format(summary.last_high)}`;
+  byId("lastObserved").textContent = formatUsd(summary.last_observed_close);
+  byId("lastPoint").textContent = formatUsd(summary.last_point);
+  byId("range").textContent = `${formatUsd(summary.last_low)} - ${formatUsd(summary.last_high)}`;
   byId("window").textContent = `${formatDate(summary.first_timestamp)} - ${formatDate(summary.last_timestamp)}`;
-  byId("m2Supply").textContent = formatUsdTrillions(summary.m2_global_supply_usd_last);
-  byId("m2Growth").textContent = Number.isFinite(Number(summary.m2_growth_yoy_pct_last))
-    ? `${percent.format(summary.m2_growth_yoy_pct_last)}%`
+  byId("m2Supply").textContent = formatUsdTrillions(macroSummary.m2_global_supply_usd_last);
+  byId("m2Growth").textContent = Number.isFinite(Number(macroSummary.m2_growth_yoy_pct_last))
+    ? `${percent.format(macroSummary.m2_growth_yoy_pct_last)}%`
     : "-";
-  byId("macroSource").innerHTML = summary.covariates?.length
-    ? `Chronos input now includes <strong>${summary.covariates.join("</strong> and <strong>")}</strong> as past covariates. Latest macro point: ${formatDate(summary.macro_last_timestamp)}. Source: <a href="${summary.macro_source_url}">${summary.macro_source}</a>.`
-    : "This run does not include macro covariates.";
+  byId("scenarioName").textContent = scenario.label;
+  setDeltaText(byId("deltaBaseline"), Number(summary.last_point) - Number(baseline.last_point));
+  setDeltaText(byId("deltaFull"), Number(summary.last_point) - Number(both.last_point));
+
+  const sourceLink = macroSummary.macro_source_url
+    ? ` Source: <a href="${macroSummary.macro_source_url}">${macroSummary.macro_source}</a>.`
+    : "";
+  byId("macroSource").innerHTML = scenario.covariates.length
+    ? `Active Chronos input includes <strong>${scenario.covariates.join("</strong> and <strong>")}</strong>. Latest macro point: ${formatDate(macroSummary.macro_last_timestamp)}.${sourceLink}`
+    : `Active Chronos input uses BTC close prices only. Latest macro point for comparison: ${formatDate(macroSummary.macro_last_timestamp)}.${sourceLink}`;
 }
 
 function renderForecastRows(rows) {
@@ -102,12 +165,32 @@ function renderForecastRows(rows) {
       (row) => `
         <tr>
           <td>${formatDate(row.timestamp)}</td>
-          <td>$${money.format(Number(row.predictions))}</td>
-          <td>$${money.format(Number(row["0.1"]))}</td>
-          <td>$${money.format(Number(row["0.9"]))}</td>
+          <td>${formatUsd(row.predictions)}</td>
+          <td>${formatUsd(row["0.1"])}</td>
+          <td>${formatUsd(row["0.9"])}</td>
         </tr>
       `,
     )
+    .join("");
+}
+
+function renderScenarioRows() {
+  const body = byId("scenarioRows");
+  const baseline = state.summaries[state.manifest.baseline];
+  body.innerHTML = Object.entries(state.manifest.scenarios)
+    .map(([key, scenario]) => {
+      const summary = state.summaries[key];
+      const delta = Number(summary.last_point) - Number(baseline.last_point);
+      const selected = key === state.selectedScenario ? ' class="is-selected"' : "";
+      return `
+        <tr${selected}>
+          <td>${scenario.label}</td>
+          <td>${formatUsd(summary.last_point)}</td>
+          <td>${formatUsdDelta(delta)}</td>
+          <td>${formatUsd(summary.last_low)} - ${formatUsd(summary.last_high)}</td>
+        </tr>
+      `;
+    })
     .join("");
 }
 
@@ -124,60 +207,49 @@ function chartPoint(timestamp, value, kind, low, high) {
   };
 }
 
-function tooltipHtml(point) {
-  const range =
-    Number.isFinite(point.low) && Number.isFinite(point.high)
-      ? `<span>10-90%: $${money.format(point.low)} - $${money.format(point.high)}</span>`
-      : "";
-  return `
-    <strong>${point.kind} · ${formatDate(point.timestamp)}</strong>
-    <span>Price: $${money.format(point.value)}</span>
-    ${range}
-  `;
-}
-
-function setupChartHover(historyRows, forecastRows) {
-  const chart = byId("forecastChart");
-  const image = byId("forecastChartImage");
-  const crosshair = byId("chartCrosshair");
-  const tooltip = byId("chartTooltip");
-  if (!chart || !image || !crosshair || !tooltip) return;
-
-  const points = [
-    ...historyRows.map((row) => chartPoint(row.timestamp, row.close, "History")),
+function updateHoverPoints(forecastRows) {
+  state.hoverPoints = [
+    ...state.historyRows.map((row) => chartPoint(row.timestamp, row.close, "History")),
     ...forecastRows.map((row) =>
       chartPoint(row.timestamp, row.predictions ?? row["0.5"], "Forecast", row["0.1"], row["0.9"]),
     ),
   ]
     .filter(Boolean)
     .sort((a, b) => a.time - b.time);
+}
 
-  if (!points.length) return;
+function tooltipHtml(point) {
+  const range =
+    Number.isFinite(point.low) && Number.isFinite(point.high)
+      ? `<span>10-90%: ${formatUsd(point.low)} - ${formatUsd(point.high)}</span>`
+      : "";
+  return `
+    <strong>${point.kind} · ${formatDate(point.timestamp)}</strong>
+    <span>Price: ${formatUsd(point.value)}</span>
+    ${range}
+  `;
+}
 
-  const firstTime = points[0].time;
-  const lastTime = points[points.length - 1].time;
-  const totalTime = Math.max(lastTime - firstTime, 1);
-  const plotWidth = chartViewBox.width - chartViewBox.left - chartViewBox.right;
+function hideChartReadout() {
+  byId("chartCrosshair").hidden = true;
+  byId("chartTooltip").hidden = true;
+}
 
-  const pointX = (time) => chartViewBox.left + ((time - firstTime) / totalTime) * plotWidth;
-  const hide = () => {
-    crosshair.hidden = true;
-    tooltip.hidden = true;
-  };
-  const nearestPoint = (targetTime) => {
-    let best = points[0];
-    let bestDistance = Math.abs(points[0].time - targetTime);
-    for (const point of points) {
-      const distance = Math.abs(point.time - targetTime);
-      if (distance < bestDistance) {
-        best = point;
-        bestDistance = distance;
-      }
-    }
-    return best;
-  };
+function setupChartHover() {
+  const chart = byId("forecastChart");
+  const image = byId("forecastChartImage");
+  const crosshair = byId("chartCrosshair");
+  const tooltip = byId("chartTooltip");
+  if (!chart || !image || !crosshair || !tooltip) return;
 
   chart.addEventListener("pointermove", (event) => {
+    const points = state.hoverPoints;
+    if (!points.length) return;
+
+    const firstTime = points[0].time;
+    const lastTime = points[points.length - 1].time;
+    const totalTime = Math.max(lastTime - firstTime, 1);
+    const plotWidth = chartViewBox.width - chartViewBox.left - chartViewBox.right;
     const imageRect = image.getBoundingClientRect();
     const chartRect = chart.getBoundingClientRect();
     if (!imageRect.width) return;
@@ -188,10 +260,18 @@ function setupChartHover(historyRows, forecastRows) {
       Math.max(chartViewBox.left, localSvgX),
     );
     const targetTime = firstTime + ((clampedSvgX - chartViewBox.left) / plotWidth) * totalTime;
-    const point = nearestPoint(targetTime);
-    const xSvg = pointX(point.time);
-    const xPixel = imageRect.left - chartRect.left + (xSvg / chartViewBox.width) * imageRect.width;
+    let point = points[0];
+    let bestDistance = Math.abs(points[0].time - targetTime);
+    for (const candidate of points) {
+      const distance = Math.abs(candidate.time - targetTime);
+      if (distance < bestDistance) {
+        point = candidate;
+        bestDistance = distance;
+      }
+    }
 
+    const xSvg = chartViewBox.left + ((point.time - firstTime) / totalTime) * plotWidth;
+    const xPixel = imageRect.left - chartRect.left + (xSvg / chartViewBox.width) * imageRect.width;
     crosshair.style.left = `${xPixel}px`;
     crosshair.hidden = false;
 
@@ -206,49 +286,75 @@ function setupChartHover(historyRows, forecastRows) {
     tooltip.style.top = `${(chartViewBox.top / chartViewBox.height) * imageRect.height + 10}px`;
   });
 
-  chart.addEventListener("pointerleave", hide);
-  chart.addEventListener("pointercancel", hide);
-  window.addEventListener("resize", hide);
+  chart.addEventListener("pointerleave", hideChartReadout);
+  chart.addEventListener("pointercancel", hideChartReadout);
+  window.addEventListener("resize", hideChartReadout);
+}
+
+function updateChartImage() {
+  const scenario = state.manifest.scenarios[state.selectedScenario];
+  const image = byId("forecastChartImage");
+  const source = state.selectedScale === "log" ? scenario.logSvg : scenario.svg;
+  image.src = source;
+  image.alt =
+    state.selectedScale === "log"
+      ? `${scenario.label} BTCUSDT forecast on a logarithmic y-axis`
+      : `${scenario.label} BTCUSDT forecast on a linear y-axis`;
+  hideChartReadout();
 }
 
 function setupScaleToggle() {
-  const image = byId("forecastChartImage");
-  const crosshair = byId("chartCrosshair");
-  const tooltip = byId("chartTooltip");
   const buttons = [...document.querySelectorAll("[data-chart-scale]")];
-  if (!image || !buttons.length) return;
-
   buttons.forEach((button) => {
     button.addEventListener("click", () => {
-      const scale = button.dataset.chartScale;
-      if (!chartSources[scale]) return;
-
-      image.src = chartSources[scale];
-      image.alt =
-        scale === "log"
-          ? "BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor on a logarithmic y-axis"
-          : "BTCUSDT history, Chronos-2 forecast line, and 10-90% probability corridor";
-      crosshair.hidden = true;
-      tooltip.hidden = true;
-
+      state.selectedScale = button.dataset.chartScale;
       buttons.forEach((item) => {
         const isActive = item === button;
         item.classList.toggle("is-active", isActive);
         item.setAttribute("aria-pressed", String(isActive));
       });
+      updateChartImage();
     });
   });
 }
 
+function setupCovariateToggles() {
+  const controls = [byId("toggleM2Supply"), byId("toggleM2Growth")];
+  controls.forEach((control) => {
+    control.addEventListener("change", () => {
+      const key = scenarioKeyFromControls();
+      if (key) selectScenario(key);
+    });
+  });
+}
+
+async function selectScenario(key) {
+  const scenario = state.manifest.scenarios[key];
+  if (!scenario) return;
+
+  state.selectedScenario = key;
+  syncCovariateControls(scenario);
+  const [summary, rows] = await Promise.all([getScenarioSummary(key), getScenarioForecast(key)]);
+  renderSummary(summary, scenario);
+  renderForecastRows(rows);
+  renderScenarioRows();
+  updateHoverPoints(rows);
+  updateChartImage();
+}
+
 async function init() {
   try {
-    const [summary, rows, historyRows] = await Promise.all([loadSummary(), loadForecastRows(), loadHistoryRows()]);
-    renderSummary(summary);
-    renderForecastRows(rows);
-    setupChartHover(historyRows, rows);
+    const [manifest, historyRows] = await Promise.all([loadJson("/data/latest/scenarios.json", "scenario manifest"), loadHistoryRows()]);
+    state.manifest = manifest;
+    state.historyRows = historyRows;
+    await Promise.all(Object.keys(manifest.scenarios).map((key) => getScenarioSummary(key)));
+    setupChartHover();
     setupScaleToggle();
+    setupCovariateToggles();
+    await selectScenario(manifest.default);
   } catch (error) {
     byId("forecastRows").innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
+    byId("scenarioRows").innerHTML = `<tr><td colspan="4">${error.message}</td></tr>`;
   }
 }
 

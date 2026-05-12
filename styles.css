@@ -135,6 +135,75 @@ h1 {
   line-height: 1.55;
 }
 
+.covariate-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.covariate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.covariate-toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+}
+
+.scenario-impact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 16px;
+  border-block: 1px solid var(--border);
+}
+
+.scenario-impact div {
+  min-width: 0;
+  padding: 13px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.scenario-impact div:last-child {
+  border-right: 0;
+}
+
+.scenario-impact span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.scenario-impact strong {
+  display: block;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.15;
+}
+
+.delta-positive {
+  color: #047857;
+}
+
+.delta-negative {
+  color: #b91c1c;
+}
+
 .section-title {
   display: flex;
   gap: 16px;
@@ -316,14 +385,29 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+tbody tr.is-selected td {
+  background: #f8fafc;
+  font-weight: 800;
+}
+
 @media (max-width: 900px) {
   .hero,
-  .metrics {
+  .metrics,
+  .scenario-impact {
     grid-template-columns: 1fr;
   }
 
   .run-meta {
     justify-items: start;
+  }
+
+  .scenario-impact div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .scenario-impact div:last-child {
+    border-bottom: 0;
   }
 }
 

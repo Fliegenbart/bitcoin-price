@@ -1,0 +1,38 @@
+{
+  "baseline": "price_only",
+  "default": "m2_both",
+  "scenarios": {
+    "price_only": {
+      "label": "Price only",
+      "covariates": [],
+      "summary": "/data/latest/scenarios/price_only/summary.json",
+      "forecast": "/data/latest/scenarios/price_only/forecast.csv",
+      "svg": "/data/latest/scenarios/price_only/forecast.svg",
+      "logSvg": "/data/latest/scenarios/price_only/forecast_log.svg"
+    },
+    "m2_supply": {
+      "label": "M2 Supply",
+      "covariates": ["m2_global_supply_usd"],
+      "summary": "/data/latest/scenarios/m2_supply/summary.json",
+      "forecast": "/data/latest/scenarios/m2_supply/forecast.csv",
+      "svg": "/data/latest/scenarios/m2_supply/forecast.svg",
+      "logSvg": "/data/latest/scenarios/m2_supply/forecast_log.svg"
+    },
+    "m2_growth": {
+      "label": "M2 Growth YoY",
+      "covariates": ["m2_growth_yoy_pct"],
+      "summary": "/data/latest/scenarios/m2_growth/summary.json",
+      "forecast": "/data/latest/scenarios/m2_growth/forecast.csv",
+      "svg": "/data/latest/scenarios/m2_growth/forecast.svg",
+      "logSvg": "/data/latest/scenarios/m2_growth/forecast_log.svg"
+    },
+    "m2_both": {
+      "label": "M2 Supply + M2 Growth YoY",
+      "covariates": ["m2_global_supply_usd", "m2_growth_yoy_pct"],
+      "summary": "/data/latest/scenarios/m2_both/summary.json",
+      "forecast": "/data/latest/scenarios/m2_both/forecast.csv",
+      "svg": "/data/latest/scenarios/m2_both/forecast.svg",
+      "logSvg": "/data/latest/scenarios/m2_both/forecast_log.svg"
+    }
+  }
+}
